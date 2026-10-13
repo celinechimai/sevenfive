@@ -1,0 +1,49 @@
+name: Deploy to Hostinger (sevenfive.chimai.ca)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble deploy package
+        run: |
+          tar -czf sevenfive.tar.gz --exclude='.git' --exclude='.github' -C . .
+          echo "Deploy package contents:"
+          tar -tzf sevenfive.tar.gz | head -40
+
+      - name: Copy archive to server over SSH
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: 65002
+          source: "sevenfive.tar.gz"
+          target: "~/"
+
+      - name: Extract into the subdomain folder only
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: 65002
+          script: |
+            DOCROOT="$HOME/domains/chimai.ca/public_html/sevenfive"
+            if [ ! -d "$DOCROOT" ]; then
+              echo "ERROR: subdomain folder not found: $DOCROOT"
+              ls "$HOME/domains/chimai.ca/public_html" || true
+              exit 1
+            fi
+            tar -xzf "$HOME/sevenfive.tar.gz" -C "$DOCROOT"
+            rm -f "$HOME/sevenfive.tar.gz"
+            find "$DOCROOT" -type d -exec chmod 755 {} +
+            find "$DOCROOT" -type f -exec chmod 644 {} +
+            echo "Subdomain folder after deploy:"
+            ls "$DOCROOT"
