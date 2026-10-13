@@ -13,7 +13,7 @@ jobs:
 
       - name: Assemble deploy package
         run: |
-          tar -czf sevenfive.tar.gz --exclude='.git' --exclude='.github' -C . .
+          tar -czf sevenfive.tar.gz --exclude='.git' --exclude='.github' --exclude='./sevenfive.tar.gz' -C . .
           echo "Deploy package contents:"
           tar -tzf sevenfive.tar.gz | head -40
 
